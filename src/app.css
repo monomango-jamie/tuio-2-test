@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+@source '../node_modules/@hardingjam/svelte-socket/dist/**/*.svelte';
+
+@font-face {
+	font-family: 'Space Grotesk';
+	src: url('/fonts/Space_Grotesk/SpaceGrotesk-VariableFont_wght.ttf') format('truetype-variations');
+	font-weight: 100 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@layer base {
+	* {
+		font-feature-settings:
+			'ss02' 1,
+			'ss03' 1;
+	}
+
+	html {
+		font-family: 'Space Grotesk', sans-serif;
+		background-color: #000;
+	}
+}
