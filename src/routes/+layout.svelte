@@ -5,6 +5,7 @@
 	import { WebsocketTuioReceiver } from '$lib/modules/WebsocketTuioReceiver';
 	import { Tuio20Client } from 'tuio-client';
 	import TuioClientProvider from '$lib/providers/TUIO/TUIOClientProvider.svelte';
+	import TUIODebugger from '$lib/components/TUIODebugger.svelte';
 
 	let tuioClient = $state<Tuio20Client | null>(null);
 
@@ -30,6 +31,7 @@
 
 {#if tuioClient}
 	<TuioClientProvider client={tuioClient}>
+		<TUIODebugger />
 		{@render children?.()}
 	</TuioClientProvider>
 {/if}
