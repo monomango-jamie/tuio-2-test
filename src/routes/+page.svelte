@@ -12,20 +12,9 @@
 		tuioCanvas.init(canvasEl);
 		tuioCanvas.start();
 
-		client.addTuioListener({
-			tuioAdd(obj) {
-				console.log('ADD', obj);
-			},
-			tuioUpdate(obj) {
-				console.log('UPDATE', obj);
-			},
-			tuioRemove(obj) {
-				console.log('REMOVE', obj);
-			},
-			tuioRefresh() {}
-		});
-
-		return () => tuioCanvas.destroy();
+		return () => {
+			tuioCanvas.destroy();
+		};
 	});
 </script>
 
