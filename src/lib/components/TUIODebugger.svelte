@@ -8,14 +8,14 @@
 		Tuio20Symbol,
 		TuioTime
 	} from 'tuio-client';
-	import { onMount } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 
 	const client = useTuioClient();
 
 	interface LogEntry {
 		id: number;
 		time: string;
-		event: 'add' | 'update' | 'remove' | 'refresh';
+		event: 'add' | 'update' | 'remove' | 'refresh' | 'relay';
 		data: Record<string, unknown>;
 	}
 
@@ -24,6 +24,12 @@
 	let showUpdates = $state(false);
 	let maxLogs = 200;
 	let minimized = $state(false);
+
+	// Expose addRelay so sibling/parent components can push relay messages in
+	export function addRelay(data: Record<string, unknown>) {
+		logs = [{ id: logId++, time: timestamp(), event: 'relay', data }, ...logs].slice(0, maxLogs);
+	}
+	setContext('tuio-debugger', { addRelay: (data: Record<string, unknown>) => addRelay(data) });
 
 	function timestamp() {
 		return new Date().toISOString().slice(11, 23);
@@ -123,7 +129,8 @@
 		add: '#6f6',
 		update: '#ff6',
 		remove: '#f66',
-		refresh: '#66f'
+		refresh: '#66f',
+		relay: '#f9a'
 	};
 </script>
 

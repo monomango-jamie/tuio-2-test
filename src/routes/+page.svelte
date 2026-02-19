@@ -1,15 +1,21 @@
 <script lang="ts">
 	import useTuioClient from '$lib/providers/TUIO/useTuioClient';
 	import { Tuio20Canvas } from '$lib/modules/TUIO20Canvas';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
 	const client = useTuioClient();
+	const debugger_ = getContext<{ addRelay: (data: Record<string, unknown>) => void }>('tuio-debugger');
 
 	let canvasEl: HTMLCanvasElement;
 	let wsConnected = $state(false);
 	let wsError = $state('');
 
 	const clientId = crypto.randomUUID();
+
+	const PAIR_WINDOW_MS = 5000;
+
+	// Queue of { senderId, timestamp } from received 'placed' messages
+	let placedQueue: { senderId: string; timestamp: number }[] = [];
 
 	onMount(() => {
 		const tuioCanvas = new Tuio20Canvas(client, true);
@@ -35,33 +41,54 @@
 			console.error('[WS Relay] Error', e);
 		});
 
-		socket.addEventListener('message', (event) => {
-			console.log('[WS Relay] Received:', event.data);
+		socket.addEventListener('message', async (event) => {
+			const raw = event.data instanceof Blob ? await event.data.text() : event.data;
+			console.log('[WS Relay] Received:', raw);
+			try {
+				const msg = JSON.parse(raw);
+				if (msg.type === 'placed') {
+					placedQueue.push({ senderId: msg.senderId, timestamp: Date.now() });
+					debugger_?.addRelay({ type: 'placed', senderId: msg.senderId ?? '?', sender: msg.sender ?? '?' });
+				}
+			} catch {
+				// ignore non-JSON
+			}
 		});
 
-		function sendToRelay(text: string) {
+		function sendPair(targetId: string, tuioDeviceId: string) {
 			if (socket.readyState !== WebSocket.OPEN) return;
-			try {
-				socket.send(JSON.stringify({
-					text,
-					sender: 'TUIO',
-					senderId: clientId
-				}));
-			} catch (err) {
-				console.error('[WS Relay] Failed to send:', err);
-			}
+			socket.send(JSON.stringify({
+				type: 'tuio-pair',
+				tuioDeviceId,
+				targetId,
+				senderId: clientId,
+				sender: 'table',
+				role: 'table'
+			}));
 		}
 
 		client.addTuioListener({
 			tuioAdd(obj) {
-				sendToRelay('[TUIO ADD]');
+				if (obj.containsNewTuioBounds() && obj.symbol?.data) {
+					const tuioDeviceId = obj.symbol.data;
+					const now = Date.now();
+
+					// Prune stale signals
+					placedQueue = placedQueue.filter(p => now - p.timestamp < PAIR_WINDOW_MS);
+
+					if (placedQueue.length === 1) {
+						const { senderId } = placedQueue.shift()!;
+						sendPair(senderId, tuioDeviceId);
+						debugger_?.addRelay({ type: 'tuio-pair', tuioDeviceId, targetId: senderId });
+						console.log(`[Pair] ${tuioDeviceId} → ${senderId}`);
+					} else if (placedQueue.length > 1) {
+						console.warn('[Pair] Ambiguous: multiple placed signals, skipping');
+						debugger_?.addRelay({ type: 'pair-ambiguous', tuioDeviceId, count: placedQueue.length });
+					}
+				}
 			},
-			tuioUpdate(obj) {
-				// sendToRelay('[TUIO UPDATE]');
-			},
-			tuioRemove(obj) {
-				sendToRelay('[TUIO REMOVE]');
-			},
+			tuioUpdate(_obj) {},
+			tuioRemove(_obj) {},
 			tuioRefresh() {}
 		});
 
