@@ -50,6 +50,7 @@
 
 			socket.onmessage = async (e) => {
 				let data: WireMessage;
+				console.log('onmessage', e.data);
 				try {
 					data = JSON.parse(typeof e.data === 'string' ? e.data : await e.data.text());
 				} catch {
