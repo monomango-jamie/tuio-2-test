@@ -80,7 +80,7 @@ def onTouches(dat, events):
 		symbolTouches = []
 
 		for touch in changedTouches:
-			profile = touch.profile
+			profile = touch.profile or ""
 			if "/tuio2/ptr" in profile or profile == "":
 				pointerTouches.append(touch)
 			elif "/tuio2/bnd" in profile:
@@ -98,7 +98,7 @@ def onTouches(dat, events):
 		height = int(event.height) if hasattr(event, 'height') else 0
 		dim = (height << 16) | width
 		frameId = int(event.timestamp * 1000) & 0xFFFFFFFF
-		oscTime = float(event.timestamp)
+		oscTime = str(int(event.timestamp * (2**32)))
 		source = str(event.source) if hasattr(event, 'source') else "TouchDesigner"
 		sendOSC(webserverDAT, "/tuio2/frm", [frameId, oscTime, dim, source])
 
