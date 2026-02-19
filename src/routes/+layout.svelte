@@ -37,7 +37,7 @@
 	};
 
 	onMount(() => {
-		const receiver = new WebsocketTuioReceiver('10.10.110.21', 3333);
+		const receiver = new WebsocketTuioReceiver('10.10.110.21', 9980);
 		const client = new Tuio20Client(receiver);
 		receiver.connect();
 		client.connect();
@@ -77,6 +77,10 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
+<div class="relay-status" class:connected={tableSocket.connected}>
+	{tableSocket.connected ? '● Relay connected' : '○ Relay disconnected'}
+</div>
+
 {#if tuioClient}
 	<TuioClientProvider client={tuioClient}>
 		<SmartphonesProvider {registry}>
@@ -85,3 +89,22 @@
 		</SmartphonesProvider>
 	</TuioClientProvider>
 {/if}
+
+<style>
+	.relay-status {
+		position: fixed;
+		top: 8px;
+		right: 8px;
+		z-index: 10;
+		padding: 4px 10px;
+		border-radius: 4px;
+		font-size: 12px;
+		font-family: monospace;
+		background: rgba(0, 0, 0, 0.7);
+		color: #f66;
+	}
+
+	.relay-status.connected {
+		color: #6f6;
+	}
+</style>
