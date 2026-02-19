@@ -58,7 +58,7 @@ def onHTTPRequest(webServerDAT, request, response):
 	return response
 
 def onWebSocketOpen(webServerDAT, client):
-	debug(f"WebSocket client connected: {client}")
+	debug(f"WebSocket client connected: {client} (total={len(webServerDAT.webSocketConnections)})")
 	op('table_clients').appendRow([client, 10])
 	return
 

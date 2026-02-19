@@ -28,9 +28,9 @@ export class WebsocketTuioReceiver extends TuioReceiver {
 		};
 
 		this._ws.onmessage = (event) => {
+			console.log('[TuioReceiver] Raw message:', event.data);
 			try {
 				const msg = JSON.parse(event.data);
-				console.log('[TuioReceiver] Received:', msg);
 				this.onOscMessage(msg);
 			} catch (e) {
 				console.warn('[TuioReceiver] Failed to parse message:', event.data, e);

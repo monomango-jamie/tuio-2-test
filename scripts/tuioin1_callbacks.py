@@ -211,5 +211,9 @@ def sendOSC(webserverDAT, address, args, verbose=False):
 	if verbose:
 		debug(msgJson)
 
-	for connection in webserverDAT.webSocketConnections:
+	connections = webserverDAT.webSocketConnections
+	if not connections:
+		debug(f"[sendOSC] WARNING: no WebSocket clients connected, message dropped: {address}")
+	for connection in connections:
+		debug(f"[sendOSC] → {connection} {address} {args}")
 		webserverDAT.webSocketSendText(msgJson, connection)
