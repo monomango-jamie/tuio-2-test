@@ -4,6 +4,9 @@ export class WebsocketTuioReceiver extends TuioReceiver {
 	private readonly _url: string;
 	private _ws: WebSocket | null = null;
 
+	public onConnected: (() => void) | null = null;
+	public onDisconnected: (() => void) | null = null;
+
 	constructor(host: string, port: number) {
 		super();
 		this._url = `ws://${host}:${port}`;
@@ -26,11 +29,13 @@ export class WebsocketTuioReceiver extends TuioReceiver {
 		this._ws.onopen = () => {
 			console.log(`[TuioReceiver] Connected to ${this._url}`);
 			this.isConnected = true;
+			this.onConnected?.();
 		};
 
 		this._ws.onclose = (e) => {
 			console.warn(`[TuioReceiver] Disconnected (code=${e.code})`);
 			this.isConnected = false;
+			this.onDisconnected?.();
 		};
 
 		this._ws.onerror = (e) => {

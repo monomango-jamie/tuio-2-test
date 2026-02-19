@@ -12,6 +12,7 @@
 
 	let tuioClient = $state<Tuio20Client | null>(null);
 	let tuioReceiver = $state<WebsocketTuioReceiver | null>(null);
+	let tuioConnected = $state(false);
 
 	const registry = new SmartphoneRegistry();
 	
@@ -39,6 +40,8 @@
 
 	onMount(() => {
 		const receiver = new WebsocketTuioReceiver('10.10.110.21', 9980);
+		receiver.onConnected = () => { tuioConnected = true; };
+		receiver.onDisconnected = () => { tuioConnected = false; };
 		const client = new Tuio20Client(receiver);
 		receiver.connect();
 		client.connect();
@@ -82,6 +85,9 @@
 <div class="relay-status" class:connected={tableSocket.connected}>
 	{tableSocket.connected ? '● Relay connected' : '○ Relay disconnected'}
 </div>
+<div class="tuio-status" class:connected={tuioConnected}>
+	{tuioConnected ? '● TUIO connected' : '○ TUIO disconnected'}
+</div>
 
 <button class="debug-btn" onclick={() => {
 	const msg = JSON.stringify({ address: '/debug/ping', args: ['hello from browser', Date.now()] });
@@ -115,6 +121,23 @@
 	}
 
 	.relay-status.connected {
+		color: #6f6;
+	}
+
+	.tuio-status {
+		position: fixed;
+		top: 32px;
+		right: 8px;
+		z-index: 10;
+		padding: 4px 10px;
+		border-radius: 4px;
+		font-size: 12px;
+		font-family: monospace;
+		background: rgba(0, 0, 0, 0.7);
+		color: #f66;
+	}
+
+	.tuio-status.connected {
 		color: #6f6;
 	}
 
