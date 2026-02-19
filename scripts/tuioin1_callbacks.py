@@ -49,7 +49,10 @@
 #	ltaType, ltaSessions
 #	(note TUIO2 3d will have rotation axis,
 #	 and angle/rotation magnitude will be in angleX, rotationX)
+_frameCounter = 0
+
 def onTouches(dat, events):
+	global _frameCounter
 	# Get the webserver DAT
 	webserverDAT = parent().parent().op('./web_server/webserver1')
 
@@ -152,14 +155,15 @@ def onTouches(dat, events):
 
 		# Send frame message
 		# /tuio2/frm args: [frameId, oscTime, dim, source]
-		# oscTime must be an NTP 64-bit integer (seconds since 1900 * 2^32)
-		# event.timestamp is already seconds since Jan 1 1900
-		oscTime = int(event.timestamp * (2**32))
+		# oscTime is an NTP 64-bit integer sent as a string to preserve precision through JSON
+		# event.timestamp is seconds since Jan 1 1900 (NTP epoch)
+		_frameCounter += 1
+		oscTime = str(int(event.timestamp * (2**32)))
 		width = event.width if hasattr(event, 'width') and event.width else 0
 		height = event.height if hasattr(event, 'height') and event.height else 0
 		dim = (width << 16) | height  # TUIO2 dim encodes width+height as one int
 		sendOSC(webserverDAT, "/tuio2/frm", [
-			int(event.timestamp * 1000) & 0xFFFFFFFF,  # frameId (use lower 32 bits of ms timestamp)
+			_frameCounter,
 			oscTime,
 			dim,
 			event.source if hasattr(event, 'source') and event.source else "TouchDesigner"
