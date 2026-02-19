@@ -11,6 +11,7 @@
 	import { TableSocket } from '$lib/socket/TableSocket.svelte';
 
 	let tuioClient = $state<Tuio20Client | null>(null);
+	let tuioReceiver = $state<WebsocketTuioReceiver | null>(null);
 
 	const registry = new SmartphoneRegistry();
 	
@@ -42,6 +43,7 @@
 		receiver.connect();
 		client.connect();
 		tuioClient = client;
+		tuioReceiver = receiver;
 
 		tableSocket.connect();
 
@@ -81,6 +83,14 @@
 	{tableSocket.connected ? '● Relay connected' : '○ Relay disconnected'}
 </div>
 
+<button class="debug-btn" onclick={() => {
+	const msg = JSON.stringify({ address: '/debug/ping', args: ['hello from browser', Date.now()] });
+	console.log('[DEBUG] Sending test message to TD:', msg);
+	tuioReceiver?.sendTest(msg);
+}}>
+	⚡ Send test to TD
+</button>
+
 {#if tuioClient}
 	<TuioClientProvider client={tuioClient}>
 		<SmartphonesProvider {registry}>
@@ -106,5 +116,20 @@
 
 	.relay-status.connected {
 		color: #6f6;
+	}
+
+	.debug-btn {
+		position: fixed;
+		top: 36px;
+		right: 8px;
+		z-index: 10;
+		padding: 4px 10px;
+		border-radius: 4px;
+		font-size: 12px;
+		font-family: monospace;
+		background: rgba(255, 200, 0, 0.2);
+		border: 1px solid rgba(255, 200, 0, 0.5);
+		color: #fc0;
+		cursor: pointer;
 	}
 </style>

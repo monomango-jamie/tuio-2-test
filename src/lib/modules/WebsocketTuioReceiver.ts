@@ -9,6 +9,16 @@ export class WebsocketTuioReceiver extends TuioReceiver {
 		this._url = `ws://${host}:${port}`;
 	}
 
+	/** Send a raw string to TD — for debugging only */
+	public sendTest(msg: string) {
+		if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
+			console.warn('[TuioReceiver] sendTest: socket not open');
+			return;
+		}
+		console.log('[TuioReceiver] sendTest →', msg);
+		this._ws.send(msg);
+	}
+
 	public connect() {
 		console.log(`[TuioReceiver] Connecting to ${this._url}`);
 		this._ws = new WebSocket(this._url);
