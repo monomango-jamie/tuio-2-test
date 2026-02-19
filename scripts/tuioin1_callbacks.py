@@ -193,27 +193,10 @@ def onTouches(dat, events):
 	return
 
 def sendOSC(webserverDAT, address, args, verbose=False):
-	"""Send JSON-encoded OSC message to all WebSocket clients.
-
-	Message shape matches what tuio-client's TuioReceiver.onOscMessage() expects:
-	  { "address": "/tuio2/xxx", "args": [...] }
-
-	When verbose=True, debug output is printed (only for change events, not streaming).
-	"""
 	import json
-
-	msg = {
-		"address": address,
-		"args": args
-	}
-
+	msg = {"address": address, "args": args}
 	msgJson = json.dumps(msg)
 	if verbose:
 		debug(msgJson)
-
-	connections = webserverDAT.webSocketConnections
-	if not connections:
-		debug(f"[sendOSC] WARNING: no WebSocket clients connected, message dropped: {address}")
-	for connection in connections:
-		debug(f"[sendOSC] → {connection} {address} {args}")
-		webserverDAT.webSocketSendText(msgJson, connection)
+	for client in webserverDAT.webSocketConnections:
+		webserverDAT.webSocketSendText(msgJson, client)

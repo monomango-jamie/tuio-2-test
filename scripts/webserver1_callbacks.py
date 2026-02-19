@@ -57,27 +57,25 @@ def onHTTPRequest(webServerDAT, request, response):
 
 	return response
 
+def broadcast(webServerDAT, msgJson):
+	# TODO: filter out non-browser clients when needed
+	for client in webServerDAT.webSocketConnections:
+		webServerDAT.webSocketSendText(msgJson, client)
+
 def onWebSocketOpen(webServerDAT, client):
-	debug(f"WebSocket client connected: {client} (total={len(webServerDAT.webSocketConnections)})")
+	debug(f"[WS] client connected: {client}")
 	op('table_clients').appendRow([client, 10])
 	return
 
 def onWebSocketClose(webServerDAT, client):
-	debug(f"WebSocket client disconnected: {client}")
+	debug(f"[WS] client disconnected: {client}")
 	tbl = op('table_clients')
 	if tbl.row(client):
 		tbl.deleteRow(client)
 	return
 
 def onWebSocketReceiveText(webServerDAT, client, data):
-	
-	dataDict = json.loads(data)
-	debug(dataDict)
-	
-	message = dataDict.get('message', None)
-	
-	debug(f"Websocket received message: {message}")
-	
+	debug(f"[WS] received from {client}: {data[:200]}")
 	return
 
 
