@@ -81,6 +81,24 @@ def onTouches(dat, events):
 
 		for touch in changedTouches:
 			profile = touch.profile or ""
+
+			# Debug: log any TUIO2-specific data present on this touch
+			hasTuio2Data = any([
+				getattr(touch, 'shear', None),
+				getattr(touch, 'radius', None),
+				getattr(touch, 'pressure', None),
+				getattr(touch, 'typeId', None),
+				getattr(touch, 'userId', None),
+				getattr(touch, 'symGroup', None),
+				getattr(touch, 'symData', None),
+			])
+			if hasTuio2Data or profile:
+				debug(f"[TUIO2 data] id={touch.id} profile={touch.profile!r} classId={touch.classId} typeId={getattr(touch,'typeId',None)} userId={getattr(touch,'userId',None)} symGroup={getattr(touch,'symGroup',None)} symData={getattr(touch,'symData',None)} shear={getattr(touch,'shear',None)} radius={getattr(touch,'radius',None)} pressure={getattr(touch,'pressure',None)}")
+
+			# Debug: very obvious alert for bnd or tok touches (devices)
+			if "/tuio2/bnd" in profile or "/tuio2/tok" in profile:
+				debug(f"*** DEVICE ON TABLE *** profile={profile!r} id={touch.id} u={touch.u} v={touch.v} w={touch.width}x{touch.height} classId={touch.classId} symData={getattr(touch,'symData',None)}")
+
 			if "/tuio2/ptr" in profile or profile == "":
 				pointerTouches.append(touch)
 			elif "/tuio2/bnd" in profile:
