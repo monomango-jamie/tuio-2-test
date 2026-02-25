@@ -2,7 +2,7 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount } from 'svelte';
-	import { WebsocketTuioReceiver } from '$lib/modules/WebsocketTuioReceiver.svelte';
+	import { WebsocketTuioReceiver } from '$lib/modules/WebsocketTuioReceiver';
 	import { Tuio20Client } from 'tuio-client';
 	import TuioClientProvider from '$lib/providers/TUIO/TUIOClientProvider.svelte';
 	import TUIODebugger from '$lib/components/TUIODebugger.svelte';
@@ -11,7 +11,6 @@
 	import { TableSocket } from '$lib/socket/TableSocket.svelte';
 
 	let tuioClient = $state<Tuio20Client | null>(null);
-	let tuioReceiver = $state<WebsocketTuioReceiver | null>(null);
 	let tuioConnected = $state(false);
 
 	const registry = new SmartphoneRegistry();
@@ -38,39 +37,45 @@
 		registry.addPlacedSignal(msg.senderId);
 	};
 
+	let tuioError = $state<string | null>(null);
+
 	onMount(() => {
-		const receiver = new WebsocketTuioReceiver('10.10.110.21', 9981);
-		receiver.onConnected = () => { tuioConnected = true; };
-		receiver.onDisconnected = () => { tuioConnected = false; };
-		const client = new Tuio20Client(receiver);
-		client.connect();
-		tuioClient = client;
-		tuioReceiver = receiver;
+		let receiver: WebsocketTuioReceiver | null = null;
+		let client: Tuio20Client | null = null;
 
-		tableSocket.connect();
+		try {
+			receiver = new WebsocketTuioReceiver('127.0.0.1', 3333);
+			receiver.onConnected = () => {
+				tuioConnected = true;
+				tuioError = null;
+			};
+			receiver.onDisconnected = () => {
+				tuioConnected = false;
+			};
+			receiver.onError = (e) => {
+				tuioError = e instanceof Error ? e.message : String(e);
+				console.error('[Layout] TUIO receiver error:', e);
+			};
 
-		// Listen for TUIO bounds+symbol → attempt pairing → send tuio-pair
-		client.addTuioListener({
-			tuioAdd(obj) {
-				if (obj.containsNewTuioBounds() && obj.symbol) {
-					const deviceId = obj.symbol.data;
-					if (!deviceId) return;
+			client = new Tuio20Client(receiver);
+			receiver.connect();
+			client.connect();
+			tuioClient = client;
+		} catch (e) {
+			tuioError = e instanceof Error ? e.message : String(e);
+			console.error('[Layout] Failed to initialize TUIO:', e);
+		}
 
-					const pairedSenderId = registry.tryPair(deviceId);
-					if (pairedSenderId) {
-						tableSocket.sendTuioPair(pairedSenderId, deviceId);
-					}
-				}
-			},
-			tuioUpdate() {},
-			tuioRemove() {},
-			tuioRefresh() {}
-		});
+		try {
+			tableSocket.connect();
+		} catch (e) {
+			console.error('[Layout] Failed to connect table socket:', e);
+		}
 
 		return () => {
-			client.disconnect();
-			receiver.disconnect();
-			tableSocket.disconnect();
+			try { client?.disconnect(); } catch (e) { console.error('[Layout] TUIO client cleanup error:', e); }
+			try { receiver?.disconnect(); } catch (e) { console.error('[Layout] TUIO receiver cleanup error:', e); }
+			try { tableSocket.disconnect(); } catch (e) { console.error('[Layout] Table socket cleanup error:', e); }
 		};
 	});
 
@@ -100,41 +105,10 @@
 		{/if}
 	</div>
 </div>
-<div class="tuio-status" class:connected={tuioConnected}>
-	<div class="tuio-header">
-		{tuioConnected ? '● TUIO connected' : '○ TUIO disconnected'}
-	</div>
-	{#if tuioReceiver}
-		<div class="tuio-details">
-			<div>URL: {tuioReceiver.url}</div>
-			<div>State: {tuioReceiver.readyStateLabel}</div>
-			<div>Messages: {tuioReceiver.messageCount}</div>
-			{#if tuioReceiver.lastMessageTime}
-				<div>Last msg: {tuioReceiver.lastMessageTime.toLocaleTimeString()}</div>
-			{/if}
-			{#if tuioReceiver.lastError}
-				<div class="error">Error: {tuioReceiver.lastError}</div>
-			{/if}
-			{#if tuioReceiver.connectTime}
-				<div>Connected at: {tuioReceiver.connectTime.toLocaleTimeString()}</div>
-			{/if}
-		</div>
-	{:else}
-		<div class="tuio-details">Initializing...</div>
-	{/if}
-	<button class="debug-btn" onclick={() => {
-		const msg = JSON.stringify({ address: '/debug/ping', args: ['hello from browser', Date.now()] });
-		console.log('[DEBUG] Sending test message to TD:', msg);
-		tuioReceiver?.sendTest(msg);
-	}}>
-		⚡ Send test to TD
-	</button>
-	<button class="debug-btn" onclick={() => {
-		console.log('[DEBUG] TUIO Socket:', tuioReceiver);
-	}}>
-		📋 Log socket
-	</button>
+<div class="tuio-status" class:connected={tuioConnected} class:error={tuioError}>
+	{tuioError ? `⚠ TUIO error: ${tuioError}` : tuioConnected ? '● TUIO connected' : '○ TUIO disconnected'}
 </div>
+
 
 {#if tuioClient}
 	<TuioClientProvider client={tuioClient}>
@@ -201,32 +175,7 @@
 		color: #6f6;
 	}
 
-	.tuio-header {
-		font-weight: bold;
-		margin-bottom: 4px;
-		padding-bottom: 4px;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-	}
-
-	.tuio-details {
-		color: #999;
-		font-size: 10px;
-		line-height: 1.5;
-	}
-
-	.tuio-details .error {
-		color: #f66;
-	}
-
-	.debug-btn {
-		margin-top: 6px;
-		padding: 4px 10px;
-		border-radius: 4px;
-		font-size: 10px;
-		font-family: monospace;
-		background: rgba(255, 200, 0, 0.2);
-		border: 1px solid rgba(255, 200, 0, 0.5);
-		color: #fc0;
-		cursor: pointer;
+	.tuio-status.error {
+		color: #fa0;
 	}
 </style>
