@@ -43,7 +43,6 @@
 		receiver.onConnected = () => { tuioConnected = true; };
 		receiver.onDisconnected = () => { tuioConnected = false; };
 		const client = new Tuio20Client(receiver);
-		receiver.connect();
 		client.connect();
 		tuioClient = client;
 		tuioReceiver = receiver;
