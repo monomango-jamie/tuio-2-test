@@ -39,7 +39,7 @@
 	};
 
 	onMount(() => {
-		const receiver = new WebsocketTuioReceiver('10.10.110.21', 9980);
+		const receiver = new WebsocketTuioReceiver('127.0.0.1', 9980);
 		receiver.onConnected = () => { tuioConnected = true; };
 		receiver.onDisconnected = () => { tuioConnected = false; };
 		const client = new Tuio20Client(receiver);

@@ -60,7 +60,7 @@ def onHTTPRequest(webServerDAT, request, response):
 def broadcast(webServerDAT, msgJson):
 	# TODO: filter out non-browser clients when needed
 	for client in webServerDAT.webSocketConnections:
-		webServerDAT.webSocketSendText(msgJson, client)
+		webServerDAT.webSocketSendText(client, msgJson)
 
 def onWebSocketOpen(webServerDAT, client):
 	debug(f"[WS] client connected: {client}")
