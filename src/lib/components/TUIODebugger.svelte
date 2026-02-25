@@ -105,17 +105,22 @@
 	onMount(() => {
 		client.addTuioListener({
 			tuioAdd(obj: Tuio20Object) {
+				console.log('tuioAdd', obj);
 				serializeObject(obj, 'add');
 			},
 			tuioUpdate(obj: Tuio20Object) {
+				console.log('tuioUpdate', obj);
 				if (showUpdates) {
 					serializeObject(obj, 'update');
 				}
 			},
 			tuioRemove(obj: Tuio20Object) {
+				console.log('tuioRemove', obj);
 				serializeObject(obj, 'remove');
 			},
-			tuioRefresh(_time: TuioTime) {}
+			tuioRefresh(_time: TuioTime) {
+				console.log('tuioRefresh', _time);
+			}
 		});
 	});
 

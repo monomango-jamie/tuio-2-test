@@ -9,6 +9,7 @@
 
 	onMount(() => {
 		const tuioCanvas = new Tuio20Canvas(client, true);
+		console.log('tuioCanvas', client);
 		tuioCanvas.init(canvasEl);
 		tuioCanvas.start();
 

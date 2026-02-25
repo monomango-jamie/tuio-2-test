@@ -1,61 +1,34 @@
+import OSC from 'osc-js';
 import { TuioReceiver } from 'tuio-client';
 
 export class WebsocketTuioReceiver extends TuioReceiver {
-	private readonly _url: string;
-	private _ws: WebSocket | null = null;
+	private readonly _host: string;
+	private readonly _port: number;
+	private _osc: OSC | null = null;
 
 	public onConnected: (() => void) | null = null;
 	public onDisconnected: (() => void) | null = null;
+	public onError: ((e: unknown) => void) | null = null;
 
 	constructor(host: string, port: number) {
 		super();
-		this._url = `ws://${host}:${port}`;
-	}
-
-	/** Send a raw string to TD — for debugging only */
-	public sendTest(msg: string) {
-		if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
-			console.warn('[TuioReceiver] sendTest: socket not open');
-			return;
-		}
-		console.log('[TuioReceiver] sendTest →', msg);
-		this._ws.send(msg);
+		this._host = host;
+		this._port = port;
+		const plugin = new OSC.WebsocketClientPlugin({ host: this._host, port: this._port });
+		this._osc = new OSC({ plugin });
+		this._osc.on('open', () => { this.isConnected = true; this.onConnected?.(); });
+		this._osc.on('close', () => { this.isConnected = false; this.onDisconnected?.(); });
+		this._osc.on('error', (e: unknown) => { this.onError?.(e); });
+		this._osc.on('*', (message: OSC.Message) => this.onOscMessage(message));
 	}
 
 	public connect() {
-		console.log(`[TuioReceiver] Connecting to ${this._url}`);
-		this._ws = new WebSocket(this._url);
-
-		this._ws.onopen = () => {
-			console.log(`[TuioReceiver] Connected to ${this._url}`);
-			this.isConnected = true;
-			this.onConnected?.();
-		};
-
-		this._ws.onclose = (e) => {
-			console.warn(`[TuioReceiver] Disconnected (code=${e.code})`);
-			this.isConnected = false;
-			this.onDisconnected?.();
-		};
-
-		this._ws.onerror = (e) => {
-			console.error(`[TuioReceiver] WebSocket error`, e);
-		};
-
-		this._ws.onmessage = (event) => {
-			console.log('[TuioReceiver] Raw message:', event.data);
-			try {
-				const msg = JSON.parse(event.data);
-				this.onOscMessage(msg);
-			} catch (e) {
-				console.warn('[TuioReceiver] Failed to parse message:', event.data, e);
-			}
-		};
+		this._osc?.open();
 	}
 
 	public disconnect() {
-		this._ws?.close();
-		this._ws = null;
+		this._osc?.close();
+		this._osc = null;
 		this.isConnected = false;
 	}
 }
