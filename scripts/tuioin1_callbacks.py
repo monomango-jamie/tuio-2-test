@@ -1,4 +1,4 @@
-# me - this DAT
+﻿# me - this DAT
 #
 # dat - the DAT receiving the TUIO messages
 # events - a list of TUIOEvent objects in order of oldest to newest
@@ -50,20 +50,34 @@
 #	(note TUIO2 3d will have rotation axis,
 #	 and angle/rotation magnitude will be in angleX, rotationX)
 
+_lastPositions = {}  # id → (u, v)
+
 def onTouches(dat, events):
 	# Get the webserver DAT
 	webserverDAT = parent().parent().op('./web_server/webserver1')
 
 	for event in events:
-		# Skip frames with no touch changes — only send on start/move/end
+		# Always process starts and ends; for moves, only include if position changed
+		positionChangedTouches = []
+		for touch in event.touchesMove:
+			prev = _lastPositions.get(touch.id)
+			if prev is None or prev[0] != touch.u or prev[1] != touch.v:
+				positionChangedTouches.append(touch)
+
+		# Update position cache for all active touches
+		for touch in event.touchesStart + event.touchesMove + event.touchesNoChange:
+			_lastPositions[touch.id] = (touch.u, touch.v)
+		for touch in event.touchesEnd:
+			_lastPositions.pop(touch.id, None)
+
 		hasChanges = (len(event.touchesStart) > 0 or
-		              len(event.touchesMove) > 0 or
+		              len(positionChangedTouches) > 0 or
 		              len(event.touchesEnd) > 0)
 		if not hasChanges:
 			continue
 
-		# Only send touch data for touches that actually changed (never touchesNoChange)
-		changedTouches = event.touchesStart + event.touchesMove
+		# Only send touch data for touches that actually changed position
+		changedTouches = event.touchesStart + positionChangedTouches
 
 		# Separate touches by profile type
 		pointerTouches = []
@@ -103,11 +117,7 @@ def onTouches(dat, events):
 				if "/tuio2/bnd" in profile or "/tuio2/tok" in profile:
 					debug(f"*** DEVICE ON TABLE *** profile={profile!r} id={touch.id} u={touch.u} v={touch.v} w={touch.width}x{touch.height} classId={touch.classId} symData={getattr(touch,'symData',None)}")
 
-			# symData presence takes priority over profile — the real table sends
-			# device touches with profile=None but symGroup/symData populated
-			if getattr(touch, 'symData', None) is not None:
-				symbolTouches.append(touch)
-			elif "/tuio2/ptr" in profile or profile == "":
+			if "/tuio2/ptr" in profile or profile == "":
 				pointerTouches.append(touch)
 			elif "/tuio2/bnd" in profile:
 				boundsTouches.append(touch)
@@ -199,4 +209,4 @@ def sendOSC(webserverDAT, address, args, verbose=False):
 	if verbose:
 		debug(msgJson)
 	for client in webserverDAT.webSocketConnections:
-		webserverDAT.webSocketSendText(msgJson, client)
+		webserverDAT.webSocketSendText(client, msgJson)
